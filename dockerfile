@@ -1,5 +1,5 @@
 # imagem base
-FROM python:3.11-slim
+FROM python:3.14-slim
 
 # instalar uv
 RUN pip install uv
