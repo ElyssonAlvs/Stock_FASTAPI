@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float
+from sqlalchemy import Column, Integer, String, Float, Boolean
 from app.database import Base
 
 class Product(Base):
@@ -10,3 +10,4 @@ class Product(Base):
     price = Column(Float, nullable=False)
     quantity = Column(Integer, default=0)
     category = Column(String, index=True)
+    deleted = Column(Boolean, default=False)

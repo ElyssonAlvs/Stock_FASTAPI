@@ -9,7 +9,10 @@ router = APIRouter(prefix="/v1/products", tags=["Products"])
 
 
 @router.post("", response_model=ProductResponse)
-def create(product: ProductCreate, db: Session = Annotated[Depends(get_db), None]):
+def create(
+    product: ProductCreate,
+    db: Annotated[Session, Depends(get_db)] = Depends(get_db)
+):
     return product_service.create_product(db, product)
 
 
@@ -17,16 +20,20 @@ def create(product: ProductCreate, db: Session = Annotated[Depends(get_db), None
 def list_products(
     name: Annotated[str | None, Query()] = None,
     category: Annotated[str | None, Query()] = None,
-    db: Session = Annotated[Depends(get_db), None]
+    skip: Annotated[int, Query()] = 0,
+    limit: Annotated[int, Query()] = 10,
+    order_by: str = "id",
+    direction: str = "asc",
+    db: Annotated[Session, Depends(get_db)] = Depends(get_db)
 ):
-    return product_service.get_products(db, name, category)
+    return product_service.get_products(db, name, category, skip, limit, order_by, direction)
 
 
 @router.patch("/{product_id}/stock")
 def update_stock(
     product_id: Annotated[int, Path()],
     quantity: Annotated[int, Query()],
-    db: Session = Annotated[Depends(get_db), None]
+    db: Annotated[Session, Depends(get_db)] = Depends(get_db)
 ):
     product = product_service.get_product(db, product_id)
 
@@ -42,7 +49,10 @@ def update_stock(
 
 
 @router.delete("/{product_id}")
-def delete(product_id: Annotated[int, Path()], db: Session = Annotated[Depends(get_db), None]):
+def delete(
+    product_id: Annotated[int, Path()],
+    db: Annotated[Session, Depends(get_db)] = Depends(get_db)
+):
     product = product_service.get_product(db, product_id)
 
     if not product:
