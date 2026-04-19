@@ -1,5 +1,6 @@
-from sqlalchemy.orm import Session, asc, desc
-from app.models.product import Product
+from sqlalchemy.orm import Session
+from sqlalchemy import asc, desc
+from ..models.product import Product
 
 
 def create_product(
@@ -77,3 +78,27 @@ def delete_product(
     ):
     product.deleted = True
     db.commit()
+
+
+def create_batch_products(
+    db: Session,
+    products_data: list
+    ):
+    """Cria múltiplos produtos em uma única transação"""
+    products = []
+    
+    for data in products_data:
+        product = Product(**data.dict())
+        db.add(product)
+        products.append(product)
+    
+    db.commit()
+    
+    # Refresh para obter os IDs gerados
+    for product in products:
+        db.refresh(product)
+    
+    return {
+        "created": len(products),
+        "items": products
+    }

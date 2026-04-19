@@ -1,1 +1,28 @@
-# Database configuration and connection
+from typing import Generator
+from sqlalchemy import create_engine
+from sqlalchemy.orm import declarative_base, sessionmaker, Session
+import os
+
+# Configuração do banco de dados
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./stock.db")
+
+engine = create_engine(
+    DATABASE_URL,
+    connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
+)
+
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+Base = declarative_base()
+
+
+def get_db() -> Generator[Session, None, None]:
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+def create_all_tables():
+    Base.metadata.create_all(bind=engine)
