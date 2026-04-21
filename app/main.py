@@ -2,9 +2,6 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .routes.product_routes import router as product_router
-from .database import create_all_tables
-
-create_all_tables()
 
 app = FastAPI(
     title="Stock FastAPI",
@@ -12,13 +9,24 @@ app = FastAPI(
     version="0.1.0"
 )
 
-# Configurar CORS
+# Configurar CORS PRIMEIRO (antes de outros middlewares)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost",
+        "http://localhost:3000",
+        "http://localhost:8000",
+        "http://localhost:8080",
+        "http://127.0.0.1",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:8000",
+        "http://127.0.0.1:8080",
+        "*"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Incluir routers

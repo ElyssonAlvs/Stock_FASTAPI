@@ -4,17 +4,18 @@ from sqlalchemy.orm import declarative_base, sessionmaker, Session
 import os
 
 # Configuração do banco de dados
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./stock.db")
+DATABASE_URL = os.getenv(
+    "DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/estoque_db")
 
 engine = create_engine(
     DATABASE_URL,
-    connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
+    connect_args={
+        "check_same_thread": False} if "sqlite" in DATABASE_URL else {}
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
-
 
 def get_db() -> Generator[Session, None, None]:
     db = SessionLocal()
