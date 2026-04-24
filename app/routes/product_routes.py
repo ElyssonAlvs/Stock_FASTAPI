@@ -53,7 +53,7 @@ def update_stock(
 
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail="Produto não encontrado")
+                            detail="Product not found")
 
     try:
         return product_service.update_stock(db, product, quantity)
@@ -71,7 +71,7 @@ def delete(
 
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail="Produto não encontrado")
+                            detail="Product not found")
 
     product_service.delete_product(db, product)
     return {"ok": True}
