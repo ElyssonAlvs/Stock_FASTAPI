@@ -13,9 +13,12 @@ Stock FastAPI is a RESTful backend service designed to manage product inventory 
 - **CRUD Operations**: Create, retrieve, update, and delete products
 - **Batch Operations**: Insert multiple products in a single request
 - **Product Management**: Track name, description, price, quantity, and category
+- **JWT Authentication**: User registration and login with token-based security
+- **User Management**: Create users, authenticate, and manage sessions
 - **Database Versioning**: Alembic migrations for schema control
 - **API Documentation**: Auto-generated Swagger UI at `/docs`
 - **CORS Support**: Configured for cross-origin requests
+- **Health Check**: Endpoint to verify API status
 - **Docker Deployment**: Containerized with Docker Compose
 
 ---
@@ -27,14 +30,20 @@ app/
 ├── main.py                 # FastAPI application entry point
 ├── database.py            # SQLAlchemy configuration & session management
 ├── models/
-│   └── product.py        # Product ORM model
+│   ├── product.py        # Product ORM model
+│   └── user.py           # User ORM model for authentication
 ├── schemas/
-│   └── product_schemas.py # Pydantic validation schemas
+│   ├── product_schemas.py # Pydantic validation schemas for products
+│   └── user.py           # Pydantic schemas for user registration/login
 ├── routes/
-│   └── product_routes.py # API endpoints (v1/products)
-└── services/
-    └── product_service.py # Business logic layer
-```
+│   ├── product_routes.py # API endpoints (v1/products)
+│   └── auth_routes.py    # Authentication endpoints (v1/auth)
+├── services/
+│   ├── product_service.py # Business logic for products
+│   ├── user_service.py   # User management logic
+│   └── auth_service.py   # JWT token generation and validation
+└── dependencies/
+    └── auth.py           # Authentication dependencies
 
 ### Technology Stack
 
@@ -43,7 +52,9 @@ app/
 | Framework | FastAPI 0.136+ |
 | Database | PostgreSQL 16 |
 | ORM | SQLAlchemy 2.0+ |
-| Migrations | Alembic |
+| Migrations | Alembic 1.18+ |
+| Authentication | Python-Jose 3.5.0+ (JWT) |
+| Password Hashing | Argon2-CFFI 25.1+ |
 | Package Manager | UV |
 | Container | Docker & Docker Compose |
 | Python | 3.14+ |
@@ -83,6 +94,57 @@ app/
 ---
 
 ## 📋 API Endpoints
+
+### Authentication
+
+#### Register User
+```http
+POST /v1/auth/register
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "securepassword123"
+}
+```
+
+**Response:**
+```json
+{
+  "id": 1,
+  "email": "user@example.com"
+}
+```
+
+#### Login
+```http
+POST /v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "securepassword123"
+}
+```
+
+**Response:**
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "bearer"
+}
+```
+
+#### Get All Users
+```http
+GET /v1/auth/users
+```
+
+#### Protected Route (Example)
+```http
+GET /v1/auth/protected
+Authorization: Bearer <access_token>
+```
 
 ### Products
 
@@ -127,9 +189,32 @@ PATCH /v1/products/{product_id}/stock?quantity=10
 DELETE /v1/products/{product_id}
 ```
 
+### System
+
+#### Health Check
+```http
+GET /health
+```
+
+**Response:**
+```json
+{
+  "status": "OK",
+  "message": "API is running"
+}
+```
+
 ---
 
 ## 🗄️ Database Schema
+
+### Users Table
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | INTEGER | Primary key |
+| email | VARCHAR | User email (unique, indexed) |
+| password | VARCHAR | Hashed password (Argon2) |
 
 ### Products Table
 
@@ -145,7 +230,38 @@ DELETE /v1/products/{product_id}
 
 ---
 
-## 🔄 Database Migrations with Alembic
+## � Quick Start: Authentication
+
+After starting the API, authenticate with these steps:
+
+1. **Register a new user**
+   ```bash
+   curl -X POST "http://localhost:8000/v1/auth/register" \
+     -H "Content-Type: application/json" \
+     -d '{"email": "user@example.com", "password": "password123"}'
+   ```
+
+2. **Login to get a token**
+   ```bash
+   curl -X POST "http://localhost:8000/v1/auth/login" \
+     -H "Content-Type: application/json" \
+     -d '{"email": "user@example.com", "password": "password123"}'
+   ```
+
+3. **Use the token in protected requests**
+   ```bash
+   curl -X GET "http://localhost:8000/v1/auth/protected" \
+     -H "Authorization: Bearer <your_access_token>"
+   ```
+
+4. **Get all users**
+   ```bash
+   curl -X GET "http://localhost:8000/v1/auth/users"
+   ```
+
+---
+
+
 
 ### Creating a Migration
 
@@ -175,71 +291,60 @@ uv run alembic history
 
 ---
 
-## 🔐 Next Steps: Authentication with JWT
+## 🔐 Authentication Implementation
 
-**Goal**: Secure all endpoints with JWT authentication
+✅ **Completed Features:**
 
-### Implementation Plan
+- User registration with email and password
+- JWT token generation (60-minute expiration)
+- Argon2 password hashing for security
+- Authentication endpoints at `/v1/auth`
+- Protected route example at `/v1/auth/protected`
+- HTTPBearer security scheme integration
 
-1. **Install Dependencies**
-   ```bash
-   uv add python-jose[cryptography] pydantic-settings
-   ```
+### How to Use Protected Endpoints
 
-2. **Create User Model**
-   - Add `User` table with email, hashed password
-   - Create migration: `uv run alembic revision --autogenerate -m "create users table"`
-
-3. **Implement Authentication Service**
-   - Password hashing (bcrypt)
-   - JWT token generation and validation
-   - Login endpoint: `POST /auth/login`
-
-4. **Secure Endpoints**
-   - Create `Depends()` for JWT verification
-   - Protect product endpoints with `@require_auth`
-   - Add user context to operations (audit trail)
-
-5. **Testing**
-   - Test login flow
-   - Verify token-protected endpoints
-   - Test token refresh mechanism
-
-### Example Protected Endpoint
+All endpoints can be protected with JWT authentication. Example:
 
 ```python
-@router.post("/v1/products", response_model=ProductResponse)
-def create_product(
-    product: ProductCreate,
-    current_user: Annotated[User, Depends(get_current_user)],
-    db: Annotated[Session, Depends(get_db)]
+from typing import Annotated
+from fastapi import Depends
+from app.services.auth_service import get_current_user
+
+@router.get("/protected")
+def protected_endpoint(
+    current_user: Annotated[str, Depends(get_current_user)]
 ):
-    return product_service.create_product(db, product, created_by=current_user.id)
+    return {"user": current_user, "message": "This is protected"}
 ```
+
+### Security Configuration
+
+- **SECRET_KEY**: Set in `app/services/auth_service.py` (⚠️ Change in production)
+- **ALGORITHM**: HS256
+- **TOKEN_EXPIRY**: 60 minutes
+- **Password Hash**: Argon2 (OWASP recommended)
 
 ---
 
-## 🎯 Alternative Roadmap Options
+## 🔐 Security Best Practices
 
-After JWT implementation, choose your next feature:
+✅ Implemented:
+- Password hashing with Argon2
+- JWT token validation
+- CORS configuration
+- SQLAlchemy ORM (SQL injection prevention)
 
-### 2️⃣ Advanced Inventory Features
-- Low stock alerts
-- Inventory history/audit logs
-- Supplier management
-- Barcode/SKU support
-
-### 3️⃣ Analytics & Reporting
-- Sales dashboard
-- Stock trends
-- Category performance
-- Revenue reports
-
-### 4️⃣ Integration Layer
-- Webhook support for external systems
-- API rate limiting
-- Request logging & monitoring
-- Third-party vendor APIs
+📋 Recommended for Production:
+- Use environment variables for `SECRET_KEY` and database credentials
+- Enable HTTPS/TLS
+- Implement rate limiting
+- Add request logging and monitoring
+- Use stronger CORS restrictions
+- Enable CSRF protection if using cookies
+- Implement password complexity requirements
+- Add two-factor authentication (2FA)
+- Use refresh tokens for better security
 
 ---
 
@@ -335,15 +440,30 @@ docker-compose up -d --build
 ## 💡 Best Practices Implemented
 
 ✅ Dependency injection with `Depends()`
+
 ✅ Annotated type hints for clarity
+
 ✅ Service layer for business logic separation
+
 ✅ Schema validation with Pydantic
+
 ✅ Database migrations for versioning
+
 ✅ Soft delete support (deleted flag)
-✅ CORS configuration
+
+✅ CORS configuration for cross-origin requests
+
 ✅ Clean code structure (MVC pattern)
+
 ✅ HTTP status codes best practices
+
 ✅ Comprehensive error handling
+
+✅ JWT authentication and authorization
+
+✅ Argon2 password hashing (OWASP recommended)
+
+✅ Health check endpoint for monitoring
 
 ---
 
@@ -353,6 +473,8 @@ This project is licensed under the MIT License - see LICENSE file for details.
 
 ---
 
-**Status**: 🟢 Ready for authentication implementation
+**Status**: 🟢 Ready for production with JWT authentication implemented
 
-**Next Review**: After JWT implementation
+**Last Updated**: April 2026
+
+**Next Review**: After implementing one of the advanced features
