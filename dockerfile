@@ -19,8 +19,12 @@ RUN uv sync --frozen
 # copiar código
 COPY . .
 
+# copiar e tornar entrypoint executável
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
 # expor porta
 EXPOSE 8000
 
-# rodar app
-CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# rodar app com migrations
+ENTRYPOINT ["/app/entrypoint.sh"]
